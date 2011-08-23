@@ -7,7 +7,7 @@ module Sunspot #:nodoc:
     # created and destroyed.
     #
     module Searchable
-      class <<self
+      class << self
         def included(base) #:nodoc:
           base.module_eval do
             extend(ActsAsMethods)
@@ -101,7 +101,7 @@ module Sunspot #:nodoc:
 
       module ClassMethods
         def self.extended(base) #:nodoc:
-          class <<base
+          class << base
             alias_method :search, :solr_search unless method_defined? :search
             alias_method :search_ids, :solr_search_ids unless method_defined? :search_ids
             alias_method :remove_all_from_index, :solr_remove_all_from_index unless method_defined? :remove_all_from_index
@@ -234,6 +234,7 @@ module Sunspot #:nodoc:
             counter = 0
             find_in_batches(:include => options[:include], :batch_size => options[:batch_size]) do |records|
               solr_benchmark options[:batch_size], counter do
+                records = records.select {|r| r.indexable? }
                 Sunspot.index(records)
               end
               Sunspot.commit if options[:batch_commit]
@@ -346,14 +347,14 @@ module Sunspot #:nodoc:
         # manually.
         #
         def solr_index
-          Sunspot.index(self)
+          Sunspot.index(self) if indexable?
         end
 
         # 
         # Index the model in Solr and immediately commit. See #index
         #
         def solr_index!
-          Sunspot.index!(self)
+          Sunspot.index!(self) if indexable?
         end
         
         # 
@@ -387,7 +388,12 @@ module Sunspot #:nodoc:
             solr_more_like_this(&block)
           end
         end
-
+        
+        def indexable?
+          return true unless sunspot_options.has_key?(:if)
+          send(sunspot_options[:if])
+        end
+        
         private
 
         def maybe_mark_for_auto_indexing
