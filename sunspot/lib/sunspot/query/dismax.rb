@@ -22,7 +22,7 @@ module Sunspot
       #
       def to_params
         params = { :q => @keywords }
-        params[:fl] = '* score'
+        params[:fl] = 'id score'
         params[:qf] = @fulltext_fields.values.map { |field| field.to_boosted_field }.join(' ')
         params[:defType] = 'dismax'
         if @phrase_fields
